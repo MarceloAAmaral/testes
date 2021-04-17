@@ -1,0 +1,251 @@
+<?PHP
+
+$maos = array("5H 5C 6S 7S KD","2C 3S 8S 8D TD");//entrada de dados convertido em array
+$somaCartas = 0; // para caso as mãos tenham a mesma pontuação
+$resultado = jogar($maos); // funcao principal
+
+print("Vencedor : ".$resultado+1); // saída. 0=jogador1; 
+
+function jogar($maos){
+	$pontuacao = 0;
+	$vencedor = 0;
+	$somaCartas =0;
+	for($a=0;$a<count($maos);$a++){	//lendo array de cartas do jogador
+		$arrCartas = serializaCartas($maos[$a]); //organizar os dados em partes úteis para uso das funções		
+		$ponto = consultaMao($arrCartas); // obtém a pontuação do jogador;
+		
+		//verifica se a pontuação do jogador é maior que a anterior armazenada.
+		if($ponto>$pontuacao){
+			$pontuacao = $ponto;
+			$vencedor=$a; // define o vencedor
+			$somaCartas = somaCartas($arrCartas);
+		}elseif($ponto == $pontuacao){
+			//caso os jogadores possuirem a mesma mão. Considerar cartas de maior valor
+			if($somaCartas < somaCartas($arrCartas)){
+				$vencedor=$a;
+			}else{
+				$vencedor=$a-1;
+			}
+		}
+	}
+	return $vencedor;
+}
+/*## funções secundárias##*/
+function consultaMao($arrCartas){	
+	$ponto=0;									//inicializa o ponto
+	$valores = valoresCartas($arrCartas);		//separa valores das cartas de seus naipes
+	$mesmoValor = qtdeMesmoValor($valores);		//quantidade cartas com mesmo valor
+	$mesmoNaipe = qtdeMesmoNaipe($valores);		//quantidade cartas com mesmo naipe
+						//soma valores das cartas
+	if(in_array(5,$mesmoNaipe)){				//função da biblioteca PHP consulta vlr em array
+		//mão tem todos os naipes iguais
+		if(royalFlush($valores) == true){
+			$ponto=10;							//pontuação obtida
+		}elseif(straightFlush($valores) == true){
+			$ponto=9;							
+		}else{
+			$ponto=8;
+		}		
+	}else{
+		//mão não tem todos os naipes iguais, analisar jogadas
+		if(quadra() == true){
+			$ponto=8;
+		}elseif(fullHouse($mesmoValor) == true){
+			$ponto=7;
+		}elseif(straight($valores) == true){
+			$ponto=5;
+		}elseif(trinca($valores) == true){
+			$ponto=4;
+		}elseif(doisPares($valores)==true){
+			$ponto = 3;
+		}elseif(umPar($valores)==true){
+			$ponto = 2;
+		}elseif(umPar($valores)==true){
+			$ponto = 2;
+		}else{
+			$maior = encontraMaiorCarta($valores);
+			$ponto = 1;
+		}	
+	}
+	return $ponto; 								//pontuação obtida
+}
+function umPar($valores){
+	if(in_array(2,$valores)){
+		return true;
+	}else{
+		return false;
+	}
+}
+function doisPares($valores){
+	if(in_array(2,$valores)){
+		$cont = 0;
+		for($a=0;$a<count($valores); $a++){
+			if($valores[$a] == 2){
+				$cont += 1;
+			}
+		}
+		if($cont>1){
+			return true;	
+		}else{
+			return false;
+		}		
+	}else{
+		return false;
+	}
+}	
+function trinca($valores){
+	if(in_array(3,$mesmoValor) AND !in_array(2,$mesmoValor)){
+		return true;
+	}else{
+		return false;
+	}
+}
+function straight($valores){	
+	$seq = encontraMenorCarta($valores);
+	for($a=0;$a<count($valores); $a++){
+		if($valores[$a] != $seq AND $valores[$a]==$seq+1){
+			$seq = $valores[$a];		
+		}else{
+			return false;
+		}
+	}
+	return true;
+}	
+function fullHouse($mesmoValor){	
+	if (in_array(3,$mesmoValor) AND  in_array(2,$mesmoValor)) {
+		return true;
+	}	
+}	
+function quadra($mesmoValor){
+	if (in_array(4,$mesmoValor)) {
+		return true;
+	}	
+}
+function straightFlush($valores){
+	$vlr = 0;
+	$contador = 0;	
+	for($a=0;$a<count($valores);$a++){
+		if($vlr != 0){
+			if($valores[$a] == $vlr+1){
+				$vlr = $valores[$a];
+				$contador += 1;
+			}
+		}else{
+			$vlr = $valores[$a];
+		}
+	}
+	if($contador == 5){
+		return true;
+	}else{
+		return false;
+	}
+}
+function royalFlush($valores){	
+	//loopig incializado com $a = 10, corresponde o menor valor da sequencia
+	for($a=10;$a<=14;$a++){
+		if(!in_array($a,$valores)){ 		
+			return false;
+		}
+	}	
+}
+/*## funções de suporte as funções secundárias##*/
+function qtdeMesmoValor($valores){
+	$arr = array();
+	for($a=0;$a<count($valores);$a++){
+		$contagem = 1;
+		for($b=0;$b<count($valores);$b++){
+			if($b!=$a AND $valores[$a] == $valores[$b]){
+				$contagem += 1;
+			}
+		}
+		if($contagem >1){
+			$arr[$valores[$a]] = $contagem;
+		}
+	}
+	return $arr;
+}
+function qtdeMesmoNaipe($valores){
+	$arr = array();
+	for($a=0;$a<count($valores);$a++){
+		$contagem = 1;
+		for($b=0;$b<count($valores);$b++){
+			if($b!=$a AND $valores[$a] == $valores[$b]){
+				$contagem += 1;
+			}
+		}
+		if($contagem >1){
+			$arr[$valores[$a]] = $contagem;
+		}
+	}
+	return $arr;
+}
+function valoresCartas($arr){
+	$valores = array();
+	for($a=0;$a<count($arr);$a++){
+		foreach($arr[$a] as $dado){
+			if($dado[0]=="T"){
+				$valores[] = 11; 
+			}elseif($dado[0]=="Q"){
+				$valores[] = 12;
+			}elseif($dado[0]=="K"){
+				$valores[] = 13;
+			}elseif($dado[0]=="A"){
+				$valores[] = 14;
+			}else{
+				$valores[] = $dado[0];				
+			}			
+		}
+	}
+	return $valores;
+}
+function consultaNaipe($arr){
+	$naipe = "";
+	$contNipe = 0 ;	
+	for($a=0;$a<count($arr);$a++){
+		foreach($arr[$a] as $dados){					
+			if($dados[1] == $nipe OR $nipe==""){
+				$contNipe += 1;
+				$nipe = $dados[1];
+			}			
+		}
+	}
+	return $contNipe;
+}
+function encontraMaiorCarta($arr){
+	$maior = 0;
+	$temp = 0;
+	for($a=0;$a<count($arr);$a++){
+		foreach($arr[$a] as $dados){
+			if($dados[0]>$maior){
+				$maior = $dados[0];
+			}
+		}
+	}	
+	return $maior;
+}
+function encontraMenorCarta($valores){
+	$menor = 15;
+	$temp = 0;
+	for($a=0;$a<count($valores);$a++){
+		if($valores[$a]<$menor){
+			$menor = $valores[$a];
+		}
+	}	
+	return $menor;
+}
+function somaCartas($valores){
+	$valor =0;
+	for($a=0;$a<count($valores);$a++){
+		$valor = $valor+$valores[$a];
+	}
+	return $valor;
+}
+function serializaCartas($cartas){
+	$cartas = explode(" ",$cartas);
+	for($a=0; $a<count($cartas);$a++){
+		$temp =  str_split($cartas[$a]);
+		$cartas[$a][] = $temp[0];
+		$cartas[$a][] = $temp[1];		
+	}
+	return $cartas;
+}
