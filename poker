@@ -1,11 +1,26 @@
 <?PHP
+ print "
+ <form action='' method='get' style='text-align:center;'>
+	<p style='text-align:center'>Exemplo: 5H 5C 6S 7S KD<br>Sendo valores T=11;Q=12;K=13;A=14 </p>
+	<fieldset style='width:50%;text-align:center;margin: 0px auto;'>
+		<label for='jogador1'>Jogador 1: </label>
+		<input type='text' value='' name='jogador1' style='font-size: 130%;min-height:30px'/>
+	</fieldset>
+	<fieldset style='width:50%;text-align:center;margin: 0px auto'>
+		<label for='jogador2'>Jogador 2: </label>
+		<input type='text' value='' name='jogador2' style='font-size: 130%;min-height:30px'/>
+	</fieldset>	
+	<input type='submit' value='jogar' style='min-height:30px; font-size: 130%;margin: 1%;'/>
+</form>
+";	
 
-$maos = array("5H 5C 6S 7S KD","2C 3S 8S 8D TD");//entrada de dados convertido em array
-$somaCartas = 0; // para caso as mãos tenham a mesma pontuação
-$resultado = jogar($maos); // funcao principal
-
-print("Vencedor : ".$resultado+1); // saída. 0=jogador1; 
-
+if(isset($_GET['jogador1']) AND isset($_GET['jogador2'])){	
+	// "5H 5C 6S 7S KD","2C 3S 8S 8D TD"
+	$maos = array($_GET['jogador1'],$_GET['jogador2']);//entrada de dados convertido em array
+	$resultado = jogar($maos); // funcao principal
+	print("<h1 style='text-align:center'>  Vencedor : ".($resultado+1)." </h1>"); // saída. 0=jogador1; 
+}
+/*## função principal##*/
 function jogar($maos){
 	$pontuacao = 0;
 	$vencedor = 0;
@@ -18,10 +33,12 @@ function jogar($maos){
 		if($ponto>$pontuacao){
 			$pontuacao = $ponto;
 			$vencedor=$a; // define o vencedor
-			$somaCartas = somaCartas($arrCartas);
-		}elseif($ponto == $pontuacao){
+			$valores = valoresCartas($arrCartas);		//separa valores das cartas de seus naipes
+			$somaCartas = somaCartas($valores);
+		}elseif($ponto == $pontuacao){	
 			//caso os jogadores possuirem a mesma mão. Considerar cartas de maior valor
-			if($somaCartas < somaCartas($arrCartas)){
+			$valores = valoresCartas($arrCartas);		//separa valores das cartas de seus naipe			
+			if($somaCartas < somaCartas($valores)){
 				$vencedor=$a;
 			}else{
 				$vencedor=$a-1;
@@ -30,57 +47,67 @@ function jogar($maos){
 	}
 	return $vencedor;
 }
+
 /*## funções secundárias##*/
 function consultaMao($arrCartas){	
-	$ponto=0;									//inicializa o ponto
+	$ponto=1;									//inicializa o ponto
 	$valores = valoresCartas($arrCartas);		//separa valores das cartas de seus naipes
-	$mesmoValor = qtdeMesmoValor($valores);		//quantidade cartas com mesmo valor
-	$mesmoNaipe = qtdeMesmoNaipe($valores);		//quantidade cartas com mesmo naipe
-						//soma valores das cartas
+	$naipes = valoresNaipes($arrCartas);		//separa naipes das cartas de seus valores
+	$mesmoValor = qtdeMesmoValor($valores);		//quantidade cartas com mesmo valor	
+	$mesmoNaipe = qtdeMesmoNaipe($naipes);		//quantidade cartas com mesmo naipe						
+	
 	if(in_array(5,$mesmoNaipe)){				//função da biblioteca PHP consulta vlr em array
 		//mão tem todos os naipes iguais
 		if(royalFlush($valores) == true){
-			$ponto=10;							//pontuação obtida
+			//A seqüência 10, Valete, Dama, Rei, Ás, do mesmo naipe.
+			$ponto=9;							//pontuação obtida
 		}elseif(straightFlush($valores) == true){
-			$ponto=9;							
+			//Todas as cartas são consecutivas e do mesmo naipe.
+			$ponto=8;							
 		}else{
-			$ponto=8;
+			$ponto = analisarJogada($mesmoValor,$valores);			
 		}		
 	}else{
-		//mão não tem todos os naipes iguais, analisar jogadas
-		if(quadra() == true){
-			$ponto=8;
-		}elseif(fullHouse($mesmoValor) == true){
-			$ponto=7;
-		}elseif(straight($valores) == true){
-			$ponto=5;
-		}elseif(trinca($valores) == true){
-			$ponto=4;
-		}elseif(doisPares($valores)==true){
-			$ponto = 3;
-		}elseif(umPar($valores)==true){
-			$ponto = 2;
-		}elseif(umPar($valores)==true){
-			$ponto = 2;
-		}else{
-			$maior = encontraMaiorCarta($valores);
-			$ponto = 1;
-		}	
+		$ponto = analisarJogada($mesmoValor,$valores);	
 	}
 	return $ponto; 								//pontuação obtida
 }
-function umPar($valores){
-	if(in_array(2,$valores)){
-		return true;
-	}else{
-		return false;
-	}
+function analisarJogada($mesmoValor,$valores){
+	$ponto = 1;
+	//analisar jogadas		
+		if(quadra($mesmoValor) == true){
+			//Quatro cartas do mesmo valor.
+			$ponto=7;
+		}elseif(fullHouse($mesmoValor) == true){
+			//Um trinca e um par
+			$ponto=6;
+		}elseif(straight($valores) == true){
+			//Todas as carta com valores consecutivos
+			$ponto=5;
+		}elseif(trinca($valores) == true){
+			//Três cartas do mesmo valor e duas de valores diferentes
+			$ponto=4;
+		}elseif(doisPares($mesmoValor)==true){
+			//Dois pares diferentes
+			$ponto = 3;
+		}elseif(umPar($mesmoValor)!= 0){
+		 //Duas cartas do mesmo valor.
+			$ponto = umPar($mesmoValor);
+		}
+		return $ponto;
 }
-function doisPares($valores){
+function umPar($valores){
+	$valor = 0;
+	if(in_array(2,$valores)){
+		$valor = array_search(2, $valores); // retorna a chave correspondente 		
+	}
+	return $valor;
+}
+function doisPares($valores){	
 	if(in_array(2,$valores)){
 		$cont = 0;
-		for($a=0;$a<count($valores); $a++){
-			if($valores[$a] == 2){
+		foreach($valores as $dado){
+			if($dado == 2){
 				$cont += 1;
 			}
 		}
@@ -94,7 +121,7 @@ function doisPares($valores){
 	}
 }	
 function trinca($valores){
-	if(in_array(3,$mesmoValor) AND !in_array(2,$mesmoValor)){
+	if(in_array(3,$valores) AND !in_array(2,$valores)){
 		return true;
 	}else{
 		return false;
@@ -111,7 +138,7 @@ function straight($valores){
 	}
 	return true;
 }	
-function fullHouse($mesmoValor){	
+function fullHouse($mesmoValor){
 	if (in_array(3,$mesmoValor) AND  in_array(2,$mesmoValor)) {
 		return true;
 	}	
@@ -149,6 +176,13 @@ function royalFlush($valores){
 	}	
 }
 /*## funções de suporte as funções secundárias##*/
+function valoresNaipes($arr){
+	$valores = array();
+	for($a=0;$a<count($arr);$a++){
+		$valores[] = $arr[$a][1];
+	}
+	return $valores;
+}
 function qtdeMesmoValor($valores){
 	$arr = array();
 	for($a=0;$a<count($valores);$a++){
@@ -164,36 +198,37 @@ function qtdeMesmoValor($valores){
 	}
 	return $arr;
 }
-function qtdeMesmoNaipe($valores){
+function qtdeMesmoNaipe($naipes){
 	$arr = array();
-	for($a=0;$a<count($valores);$a++){
+	for($a=0;$a<count($naipes);$a++){
 		$contagem = 1;
-		for($b=0;$b<count($valores);$b++){
-			if($b!=$a AND $valores[$a] == $valores[$b]){
+		for($b=0;$b<count($naipes);$b++){
+			if($b!=$a AND $naipes[$a] == $naipes[$b]){
 				$contagem += 1;
 			}
 		}
 		if($contagem >1){
-			$arr[$valores[$a]] = $contagem;
+			$arr[$naipes[$a]] = $contagem;
 		}
 	}
+	
 	return $arr;
 }
 function valoresCartas($arr){
 	$valores = array();
 	for($a=0;$a<count($arr);$a++){
-		foreach($arr[$a] as $dado){
-			if($dado[0]=="T"){
-				$valores[] = 11; 
-			}elseif($dado[0]=="Q"){
-				$valores[] = 12;
-			}elseif($dado[0]=="K"){
-				$valores[] = 13;
-			}elseif($dado[0]=="A"){
-				$valores[] = 14;
-			}else{
-				$valores[] = $dado[0];				
-			}			
+		if($arr[$a][0]=="J"){
+			$valores[] = 10;
+		}elseif($arr[$a][0]=="T"){
+			$valores[] = 11; 
+		}elseif($arr[$a][0]=="Q"){
+			$valores[] = 12;
+		}elseif($arr[$a][0]=="K"){
+			$valores[] = 13;
+		}elseif($arr[$a][0]=="A"){
+			$valores[] = 14;
+		}else{
+			$valores[] = $arr[$a][0];				
 		}
 	}
 	return $valores;
@@ -240,12 +275,11 @@ function somaCartas($valores){
 	}
 	return $valor;
 }
-function serializaCartas($cartas){
+function serializaCartas($cartas){	
 	$cartas = explode(" ",$cartas);
-	for($a=0; $a<count($cartas);$a++){
-		$temp =  str_split($cartas[$a]);
-		$cartas[$a][] = $temp[0];
-		$cartas[$a][] = $temp[1];		
+	for($a=0;$a<count($cartas);$a++){
+		$temp =  str_split($cartas[$a]);//converter string em array
+		$cartas[$a] = array($temp[0],$temp[1]);		
 	}
 	return $cartas;
 }
